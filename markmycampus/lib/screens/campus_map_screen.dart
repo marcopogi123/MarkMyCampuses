@@ -29,10 +29,10 @@ class _CampusMapScreenState extends State<CampusMapScreen>
     "Building 1": [0.63, 0.38, 0.18, 0.05],
     "Building 2": [0.32, 0.22, 0.06, 0.13],
     "Building 3": [0.32, 0.05, 0.08, 0.17],
-    "Building 4": [0.27, 0.30, 0.04, 0.06],
+    "Building 4": [0.25, 0.30, 0.06, 0.06],
     "Building 5": [0.10, 0.52, 0.07, 0.31],
     "Building 6": [0.45, 0.73, 0.06, 0.21],
-    "Building 8": [0.42, 0.22, 0.06, 0.1],
+    "Building 8": [0.42, 0.22, 0.06, 0.12],
     "Building 9": [0.17, 0.68, 0.27, 0.07],
     "Technocore": [0.10, 0.38, 0.10, 0.14],
     "Congregating Area": [0.22, 0.35, 0.18, 0.09],
@@ -50,7 +50,6 @@ class _CampusMapScreenState extends State<CampusMapScreen>
 
   List<String> _filteredResults = [];
 
-  // Logic to include ALL rooms from ALL floors in search
   void _onSearchChanged(String query) {
     if (query.isEmpty) {
       setState(() => _filteredResults = []);

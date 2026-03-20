@@ -5,9 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:markmycampus/screens/auth_screen.dart';
 import '../data/campus_data.dart';
 import '../widgets/nav_bar.dart';
-import 'splash_screen.dart';
-import 'campus_map_screen.dart';
-import 'schedule_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});

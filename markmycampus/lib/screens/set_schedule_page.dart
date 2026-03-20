@@ -10,15 +10,15 @@ class SetSchedulePage extends StatefulWidget {
 
 class _SetSchedulePageState extends State<SetSchedulePage> {
   List<DateTime> selectedDates = [];
-  TimeOfDay fromTime = const TimeOfDay(hour: 9, minute: 30);
+  TimeOfDay fromTime = const TimeOfDay(hour: 7, minute: 30);
   TimeOfDay toTime = const TimeOfDay(hour: 11, minute: 30);
-  String? _selectedLocation;
+
+  String? _selectedBuilding;
+  String? _selectedFloor;
+  String? _selectedRoom;
+
   Color _selectedColor = const Color(0xFF4A90E2);
-
   final TextEditingController _sub = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
-
-  final List<String> _tipLocations = campusData.keys.toList();
 
   final List<Color> _colorOptions = [
     const Color(0xFF4A90E2),
@@ -68,128 +68,155 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
         ),
         centerTitle: true,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
-          child: Column(
-            children: [
-              _buildSectionHeader("Course Details"),
-              _buildCustomTextField(
-                controller: _sub,
-                hint: "Subject Name",
-                icon: Icons.book_outlined,
-              ),
-              const SizedBox(height: 20),
-              _buildSectionHeader("Schedule"),
-              _buildClickableTile(
-                onTap: () async {
-                  final List<DateTime>? results = await showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(30),
-                      ),
-                    ),
-                    builder: (context) =>
-                        _CalendarPicker(initialDates: selectedDates),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 75),
+        child: Column(
+          children: [
+            _buildSectionHeader("Course Details"),
+            _buildCustomTextField(
+              controller: _sub,
+              hint: "Subject Name",
+              icon: Icons.book_outlined,
+            ),
+
+            const SizedBox(height: 30),
+            _buildSectionHeader("Location"),
+
+            // --- CASCADING DROPDOWNS ---
+            _buildSelectionTile(
+              label: "Building",
+              value: _selectedBuilding,
+              hint: "Select Building",
+              icon: Icons.apartment,
+              onTap: () => _showOptionPicker(campusData.keys.toList(), (val) {
+                setState(() {
+                  _selectedBuilding = val;
+                  _selectedFloor = null; // Reset sub-selections
+                  _selectedRoom = null;
+                });
+              }),
+            ),
+            const SizedBox(height: 10),
+            _buildSelectionTile(
+              label: "Floor",
+              value: _selectedFloor,
+              hint: "Select Floor",
+              icon: Icons.layers,
+              enabled: _selectedBuilding != null,
+              onTap: () {
+                if (_selectedBuilding != null) {
+                  var floors = campusData[_selectedBuilding!]["floors"].keys
+                      .toList();
+                  _showOptionPicker(floors, (val) {
+                    setState(() {
+                      _selectedFloor = val;
+                      _selectedRoom = null;
+                    });
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildSelectionTile(
+              label: "Room",
+              value: _selectedRoom,
+              hint: "Select Room",
+              icon: Icons.meeting_room,
+              enabled: _selectedFloor != null,
+              onTap: () {
+                if (_selectedFloor != null) {
+                  var rooms =
+                      (campusData[_selectedBuilding!]["floors"][_selectedFloor!]
+                              as Map)
+                          .keys
+                          .toList();
+                  _showOptionPicker(
+                    rooms.cast<String>(),
+                    (val) => setState(() => _selectedRoom = val),
                   );
-                  if (results != null) setState(() => selectedDates = results);
-                },
-                icon: Icons.calendar_today_rounded,
-                title: "Dates",
-                subtitle: selectedDates.isEmpty
-                    ? "Select dates"
-                    : "${selectedDates.length} selected",
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildClickableTile(
-                      onTap: () => _pickTime(context, true),
-                      icon: Icons.access_time_filled,
-                      title: "Start",
-                      subtitle: fromTime.format(context),
+                }
+              },
+            ),
+
+            const SizedBox(height: 30),
+            _buildSectionHeader("Schedule"),
+            _buildClickableTile(
+              onTap: () async {
+                final List<DateTime>? results = await showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildClickableTile(
-                      onTap: () => _pickTime(context, false),
-                      icon: Icons.access_time,
-                      title: "End",
-                      subtitle: toTime.format(context),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildSectionHeader("Location"),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedLocation,
-                    isExpanded: true,
-                    hint: const Text(
-                      "Select Building",
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    items: _tipLocations
-                        .map(
-                          (loc) =>
-                              DropdownMenuItem(value: loc, child: Text(loc)),
-                        )
-                        .toList(),
-                    onChanged: (val) => setState(() => _selectedLocation = val),
+                  builder: (context) =>
+                      _CalendarPicker(initialDates: selectedDates),
+                );
+                if (results != null) setState(() => selectedDates = results);
+              },
+              icon: Icons.calendar_today_rounded,
+              title: "Dates",
+              subtitle: selectedDates.isEmpty
+                  ? "Select dates"
+                  : "${selectedDates.length} selected",
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildClickableTile(
+                    onTap: () => _pickTime(context, true),
+                    icon: Icons.access_time_filled,
+                    title: "Start",
+                    subtitle: fromTime.format(context),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _buildCustomTextField(
-                controller: _notes,
-                hint: "Room / Lab Number",
-                icon: Icons.meeting_room_outlined,
-              ),
-              const SizedBox(height: 20),
-              _buildSectionHeader("Category Color"),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: _colorOptions
-                    .map(
-                      (color) => GestureDetector(
-                        onTap: () => setState(() => _selectedColor = color),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: _selectedColor == color
-                                ? Border.all(color: Colors.black, width: 2)
-                                : null,
-                          ),
-                          child: _selectedColor == color
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: Colors.white,
-                                )
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildClickableTile(
+                    onTap: () => _pickTime(context, false),
+                    icon: Icons.access_time,
+                    title: "End",
+                    subtitle: toTime.format(context),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 30),
+            _buildSectionHeader("Category Color"),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: _colorOptions
+                  .map(
+                    (color) => GestureDetector(
+                      onTap: () => setState(() => _selectedColor = color),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: _selectedColor == color
+                              ? Border.all(color: Colors.black, width: 2)
                               : null,
                         ),
+                        child: _selectedColor == color
+                            ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 80),
-            ],
-          ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 100),
+          ],
         ),
       ),
       bottomSheet: Container(
@@ -198,7 +225,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
         child: ElevatedButton(
           onPressed: () {
             if (_sub.text.isNotEmpty &&
-                _selectedLocation != null &&
+                _selectedRoom != null &&
                 selectedDates.isNotEmpty) {
               for (var date in selectedDates) {
                 globalSchedules.add({
@@ -206,8 +233,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
                   'from': fromTime.format(context),
                   'to': toTime.format(context),
                   'date': DateFormat('yyyy-MM-dd').format(date),
-                  'location': _selectedLocation,
-                  'notes': _notes.text,
+                  'location': "$_selectedRoom ($_selectedBuilding)",
                   'color': _selectedColor,
                 });
               }
@@ -233,16 +259,92 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
 
   Widget _buildSectionHeader(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w900,
-        color: Colors.grey,
-        letterSpacing: 1.2,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: Colors.grey,
+          letterSpacing: 1.2,
+        ),
       ),
     ),
   );
+
+  Widget _buildSelectionTile({
+    required String label,
+    String? value,
+    required String hint,
+    required IconData icon,
+    bool enabled = true,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        decoration: BoxDecoration(
+          color: enabled ? const Color(0xFFF7F8FA) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: enabled ? const Color(0xFFFFD633) : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 15),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+                Text(
+                  value ?? hint,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: enabled ? Colors.black : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOptionPicker(List<String> options, Function(String) onSelect) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: options
+            .map(
+              (opt) => ListTile(
+                title: Text(opt),
+                onTap: () {
+                  onSelect(opt);
+                  Navigator.pop(context);
+                },
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String hint,
@@ -254,14 +356,15 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
     ),
     child: TextField(
       controller: controller,
-      textAlign: TextAlign.center,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: Colors.black54, size: 20),
         border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(vertical: 15),
       ),
     ),
   );
+
   Widget _buildClickableTile({
     required VoidCallback onTap,
     required IconData icon,
@@ -271,6 +374,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.all(15),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8FA),
         borderRadius: BorderRadius.circular(15),
@@ -284,7 +388,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
           ),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -292,6 +396,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
   );
 }
 
+// --- CALENDAR PICKER REMAINING UNCHANGED ---
 class _CalendarPicker extends StatefulWidget {
   final List<DateTime> initialDates;
   const _CalendarPicker({required this.initialDates});
