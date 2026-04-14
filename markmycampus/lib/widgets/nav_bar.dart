@@ -4,6 +4,14 @@ import '../screens/campus_map_screen.dart';
 import '../screens/schedule_page.dart';
 import '../screens/profile_page.dart';
 
+Route _createInstantRoute(Widget page) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
+
 Widget buildNav(BuildContext context, int activeIndex) {
   return Container(
     height: 90,
@@ -14,13 +22,14 @@ Widget buildNav(BuildContext context, int activeIndex) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
+        // Home Button
         IconButton(
           icon: const Icon(Icons.home, size: 30),
           onPressed: () {
             if (globalUserName != "User") {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (c) => const CampusMapScreen()),
+                _createInstantRoute(const CampusMapScreen()), // Line Updated
                 (route) => false,
               );
             } else {
@@ -28,6 +37,7 @@ Widget buildNav(BuildContext context, int activeIndex) {
             }
           },
         ),
+        // Map Button
         IconButton(
           icon: Icon(
             Icons.near_me,
@@ -38,10 +48,11 @@ Widget buildNav(BuildContext context, int activeIndex) {
             if (activeIndex != 1)
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (c) => const CampusMapScreen()),
+                _createInstantRoute(const CampusMapScreen()), // Line Updated
               );
           },
         ),
+        // Schedule Button
         IconButton(
           icon: Icon(
             Icons.calendar_month,
@@ -52,10 +63,11 @@ Widget buildNav(BuildContext context, int activeIndex) {
             if (activeIndex != 2)
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (c) => const SchedulePage()),
+                _createInstantRoute(const SchedulePage()), // Line Updated
               );
           },
         ),
+        // Profile Button
         IconButton(
           icon: Icon(
             Icons.person_pin,
@@ -66,7 +78,7 @@ Widget buildNav(BuildContext context, int activeIndex) {
             if (activeIndex != 3)
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (c) => const ProfilePage()),
+                _createInstantRoute(const ProfilePage()), // Line Updated
               );
           },
         ),

@@ -43,7 +43,11 @@ class MarkMyCampusScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (c) => const AuthScreen()),
+                    PageRouteBuilder(
+                      pageBuilder: (c, a1, a2) => const AuthScreen(),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFD633),

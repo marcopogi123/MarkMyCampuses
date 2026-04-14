@@ -43,8 +43,22 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
         child: child!,
       ),
     );
-    if (picked != null)
+    if (picked != null) {
       setState(() => isFrom ? fromTime = picked : toTime = picked);
+    }
+  }
+
+  void _showFeedback(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -69,7 +83,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 75),
+        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 20),
         child: Column(
           children: [
             _buildSectionHeader("Course Details"),
@@ -82,7 +96,6 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
             const SizedBox(height: 30),
             _buildSectionHeader("Location"),
 
-            // --- CASCADING DROPDOWNS ---
             _buildSelectionTile(
               label: "Building",
               value: _selectedBuilding,
@@ -91,7 +104,7 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
               onTap: () => _showOptionPicker(campusData.keys.toList(), (val) {
                 setState(() {
                   _selectedBuilding = val;
-                  _selectedFloor = null; // Reset sub-selections
+                  _selectedFloor = null;
                   _selectedRoom = null;
                 });
               }),
@@ -104,16 +117,14 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
               icon: Icons.layers,
               enabled: _selectedBuilding != null,
               onTap: () {
-                if (_selectedBuilding != null) {
-                  var floors = campusData[_selectedBuilding!]["floors"].keys
-                      .toList();
-                  _showOptionPicker(floors, (val) {
-                    setState(() {
-                      _selectedFloor = val;
-                      _selectedRoom = null;
-                    });
+                var floors = campusData[_selectedBuilding!]["floors"].keys
+                    .toList();
+                _showOptionPicker(floors, (val) {
+                  setState(() {
+                    _selectedFloor = val;
+                    _selectedRoom = null;
                   });
-                }
+                });
               },
             ),
             const SizedBox(height: 10),
@@ -124,17 +135,15 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
               icon: Icons.meeting_room,
               enabled: _selectedFloor != null,
               onTap: () {
-                if (_selectedFloor != null) {
-                  var rooms =
-                      (campusData[_selectedBuilding!]["floors"][_selectedFloor!]
-                              as Map)
-                          .keys
-                          .toList();
-                  _showOptionPicker(
-                    rooms.cast<String>(),
-                    (val) => setState(() => _selectedRoom = val),
-                  );
-                }
+                var rooms =
+                    (campusData[_selectedBuilding!]["floors"][_selectedFloor!]
+                            as Map)
+                        .keys
+                        .toList();
+                _showOptionPicker(
+                  rooms.cast<String>(),
+                  (val) => setState(() => _selectedRoom = val),
+                );
               },
             ),
 
@@ -237,7 +246,10 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
                   'color': _selectedColor,
                 });
               }
+              _showFeedback("Schedule added successfully!");
               Navigator.pop(context);
+            } else {
+              _showFeedback("Please complete all details.", isError: true);
             }
           },
           style: ElevatedButton.styleFrom(
@@ -396,7 +408,6 @@ class _SetSchedulePageState extends State<SetSchedulePage> {
   );
 }
 
-// --- CALENDAR PICKER REMAINING UNCHANGED ---
 class _CalendarPicker extends StatefulWidget {
   final List<DateTime> initialDates;
   const _CalendarPicker({required this.initialDates});
@@ -451,6 +462,11 @@ class _CalendarPickerState extends State<_CalendarPicker> {
             ),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD633),
+              foregroundColor: Colors.black,
+              minimumSize: const Size(double.infinity, 50),
+            ),
             onPressed: () => Navigator.pop(context, tempDates),
             child: const Text("Confirm Selection"),
           ),

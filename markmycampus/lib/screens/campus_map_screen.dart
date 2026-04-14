@@ -25,7 +25,7 @@ class _CampusMapScreenState extends State<CampusMapScreen>
   String? _navigationTarget;
 
   final Map<String, List<double>> buildingCoords = {
-    "Entrance": [0.40, 0.93, 0.05, 0.05],
+    "Entrance": [0.39, 0.95, 0.07, 0.01],
     "Building 1": [0.63, 0.38, 0.18, 0.05],
     "Building 2": [0.32, 0.22, 0.06, 0.13],
     "Building 3": [0.32, 0.05, 0.08, 0.17],
@@ -78,9 +78,9 @@ class _CampusMapScreenState extends State<CampusMapScreen>
         }
       }
     } catch (e) {
-      return "";
+      return "No hint available.";
     }
-    return "";
+    return "No hint available.";
   }
 
   void _onBuildingClick(
@@ -91,16 +91,23 @@ class _CampusMapScreenState extends State<CampusMapScreen>
     double h,
     BoxConstraints constraints,
   ) {
-    if (name == "Entrance") return;
     setState(() {
       _selectedBuilding = name;
       _highlightedBuilding = name;
       _searchController.text = name;
-      _selectedFloor = campusData[name]["floors"].keys.first;
-      _selectedRoom = campusData[name]["floors"][_selectedFloor].keys.first;
+
+      if (campusData.containsKey(name)) {
+        _selectedFloor = campusData[name]["floors"].keys.first;
+        _selectedRoom = campusData[name]["floors"][_selectedFloor].keys.first;
+      } else {
+        _selectedFloor = "N/A";
+        _selectedRoom = name;
+      }
+
       _isPanelVisible = true;
       _startPoint = "Entrance";
     });
+
     _animateTo(
       (x + (w / 2)) * constraints.maxWidth,
       (y + (h / 2)) * constraints.maxHeight,
@@ -145,6 +152,8 @@ class _CampusMapScreenState extends State<CampusMapScreen>
       _selectedBuilding = "Select Building";
       _transformationController.value = Matrix4.identity();
       _showHintOverlay = false;
+      _isPanelVisible = false;
+      _filteredResults = [];
     });
   }
 
@@ -158,15 +167,28 @@ class _CampusMapScreenState extends State<CampusMapScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(25, 40, 25, 10),
-                  child: Text(
-                    'TIP Quezon City',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3142),
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(25, 40, 25, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'TIP Quezon City',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3142),
+                        ),
+                      ),
+                      Image.asset(
+                        'assets/logo.png', // Ensure path is correct in pubspec.yaml
+                        height: 40,
+                        width: 40,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.school, size: 40),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
@@ -246,6 +268,71 @@ class _CampusMapScreenState extends State<CampusMapScreen>
               ],
             ),
 
+            // SEARCH DROPDOWN (Directly under search bar)
+            if (_filteredResults.isNotEmpty)
+              Positioned(
+                top: 170, // Positioned right below the search bar
+                left: 25,
+                right: 25,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      const BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: _filteredResults.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (ctx, idx) => ListTile(
+                      visualDensity: VisualDensity.compact,
+                      leading: const Icon(
+                        Icons.location_on,
+                        color: Color(0xFFFFD633),
+                      ),
+                      title: Text(
+                        _filteredResults[idx],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onTap: () {
+                        final String res = _filteredResults[idx];
+                        final String bldg = res.split('(')[1].split(' - ')[0];
+                        final String floor = res.split(' - ')[1].split(')')[0];
+                        final String room = res.split(' (')[0];
+                        setState(() {
+                          _selectedBuilding = (bldg == "Other Areas")
+                              ? room
+                              : bldg;
+                          _selectedFloor = floor;
+                          _selectedRoom = room;
+                          _searchController.text = room;
+                          _highlightedBuilding = _selectedBuilding;
+                          _filteredResults =
+                              []; // Hide dropdown after selection
+                          _startPoint = "Entrance";
+                          _isPanelVisible = true; // Show panel with details
+                        });
+                        FocusScope.of(context).unfocus();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
             if (_selectedBuilding != "Select Building")
               Positioned(
                 top: 175,
@@ -301,7 +388,8 @@ class _CampusMapScreenState extends State<CampusMapScreen>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              campusData[_selectedBuilding]["bldgHint"] ?? "",
+                              campusData[_selectedBuilding]?["bldgHint"] ??
+                                  "General Area",
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontStyle: FontStyle.italic,
@@ -412,54 +500,12 @@ class _CampusMapScreenState extends State<CampusMapScreen>
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() {
                       _isPanelVisible = false;
-                      _filteredResults = [];
                     }),
                   ),
                 ],
               ),
             ),
             const Divider(height: 1),
-            if (_filteredResults.isNotEmpty)
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.zero,
-                  itemCount: _filteredResults.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
-                  itemBuilder: (ctx, idx) => ListTile(
-                    visualDensity: VisualDensity.compact,
-                    leading: const Icon(
-                      Icons.location_on,
-                      color: Color(0xFFFFD633),
-                    ),
-                    title: Text(
-                      _filteredResults[idx],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onTap: () {
-                      final String res = _filteredResults[idx];
-                      final String bldg = res.split('(')[1].split(' - ')[0];
-                      final String floor = res.split(' - ')[1].split(')')[0];
-                      final String room = res.split(' (')[0];
-                      setState(() {
-                        _selectedBuilding = (bldg == "Other Areas")
-                            ? room
-                            : bldg;
-                        _selectedFloor = floor;
-                        _selectedRoom = room;
-                        _searchController.text = room;
-                        _highlightedBuilding = _selectedBuilding;
-                        _filteredResults = [];
-                        _startPoint = "Entrance";
-                      });
-                    },
-                  ),
-                ),
-              ),
             _buildDetailRow(
               Icons.my_location,
               "From",
@@ -601,6 +647,7 @@ class _CampusMapScreenState extends State<CampusMapScreen>
       left: x * constraints.maxWidth,
       top: y * constraints.maxHeight,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => _onBuildingClick(name, x, y, w, h, constraints),
         child: Container(
           width: w * constraints.maxWidth,
@@ -608,12 +655,12 @@ class _CampusMapScreenState extends State<CampusMapScreen>
           color: Colors.transparent,
           child: Center(
             child: Text(
-              name == "Entrance" ? "" : name,
+              name == "Entrance" ? "ENTRANCE" : name,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 5,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: name == "Entrance" ? Colors.green : Colors.black87,
               ),
             ),
           ),
@@ -649,38 +696,32 @@ class CustomMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    if (buildingCoords.containsKey("Entrance")) {
-      var ent = buildingCoords["Entrance"]!;
-      Offset entPos = Offset(
-        (ent[0] + ent[2] / 2) * size.width,
-        (ent[1] + ent[3] / 2) * size.height,
-      );
-      canvas.drawCircle(entPos, 5, Paint()..color = Colors.green);
-      TextPainter(
-          text: const TextSpan(
-            text: "ENTRANCE",
-            style: TextStyle(
-              color: Colors.green,
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )
-        ..layout()
-        ..paint(canvas, Offset(entPos.dx - 20, entPos.dy + 10));
-    }
-
     buildingCoords.forEach((name, coords) {
-      if (name == "Entrance") return;
       final Rect r = Rect.fromLTWH(
         coords[0] * size.width,
         coords[1] * size.height,
         coords[2] * size.width,
         coords[3] * size.height,
       );
-      canvas.drawRect(r, (name == highlightedBuilding) ? active : fill);
-      canvas.drawRect(r, border);
+
+      if (name == "Entrance") {
+        final Paint entranceFill = Paint()
+          ..color = Colors.green.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+        final Paint entranceBorder = Paint()
+          ..color = Colors.green
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+
+        canvas.drawRect(
+          r,
+          (name == highlightedBuilding) ? active : entranceFill,
+        );
+        canvas.drawRect(r, entranceBorder);
+      } else {
+        canvas.drawRect(r, (name == highlightedBuilding) ? active : fill);
+        canvas.drawRect(r, border);
+      }
     });
 
     if (startPoint != null && buildingCoords.containsKey(startPoint!)) {
@@ -704,6 +745,7 @@ class CustomMapPainter extends CustomPainter {
         buildingCoords.containsKey(startPoint!)) {
       var originData = buildingCoords[startPoint!]!;
       var targetData = buildingCoords[navigationTarget!]!;
+
       Offset start = Offset(
         (originData[0] + originData[2] / 2) * size.width,
         (originData[1] + originData[3] / 2) * size.height,
@@ -713,17 +755,21 @@ class CustomMapPainter extends CustomPainter {
         (targetData[1] + targetData[3] / 2) * size.height,
       );
 
+      double hallwayX = 0.39 * size.width;
       Path path = Path()
         ..moveTo(start.dx, start.dy)
-        ..lineTo(start.dx, end.dy)
+        ..lineTo(hallwayX, start.dy)
+        ..lineTo(hallwayX, end.dy)
         ..lineTo(end.dx, end.dy);
+
       canvas.drawPath(
         path,
         Paint()
           ..color = Colors.blue
           ..strokeWidth = 3.0
           ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round,
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
       );
       canvas.drawCircle(end, 6, Paint()..color = Colors.red);
     }

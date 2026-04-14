@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
 import '../data/campus_data.dart';
 import '../widgets/nav_bar.dart';
 import 'set_schedule_page.dart';
@@ -12,6 +13,7 @@ class SchedulePage extends StatefulWidget {
 
 class _SchedulePageState extends State<SchedulePage> {
   DateTime _selectedDay = DateTime.now();
+
   bool _isOngoing(Map<String, dynamic> schedule) {
     final now = DateTime.now();
     final format = DateFormat('h:mm a');
@@ -26,6 +28,52 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
+  void _confirmDelete(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text("Delete Schedule?"),
+          content: Text("Are you sure you want to remove ${item['subject']}?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  globalSchedules.remove(item);
+                });
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("${item['subject']} deleted successfully."),
+                    backgroundColor: Colors.redAccent,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.all(20),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String filterKey = DateFormat('yyyy-MM-dd').format(_selectedDay);
@@ -33,6 +81,7 @@ class _SchedulePageState extends State<SchedulePage> {
         .where((s) => s['date'] == filterKey)
         .toList();
     final ongoing = dailySchedules.where((s) => _isOngoing(s)).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -51,14 +100,20 @@ class _SchedulePageState extends State<SchedulePage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const CircleAvatar(
+                  CircleAvatar(
+                    radius: 20,
                     backgroundColor: Colors.black,
-                    child: Icon(Icons.person, color: Colors.white),
+                    backgroundImage: (globalProfileImage != null)
+                        ? FileImage(globalProfileImage!)
+                        : null,
+                    child: (globalProfileImage == null)
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
                   ),
                 ],
               ),
             ),
-            Container(
+            SizedBox(
               height: 90,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -142,7 +197,12 @@ class _SchedulePageState extends State<SchedulePage> {
                     ),
                     const SizedBox(height: 15),
                     dailySchedules.isEmpty
-                        ? const Center(child: Text("No classes scheduled."))
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 20),
+                              child: Text("No classes scheduled."),
+                            ),
+                          )
                         : ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -161,8 +221,11 @@ class _SchedulePageState extends State<SchedulePage> {
                   onPressed: () async {
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (c) => const SetSchedulePage(),
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            const SetSchedulePage(),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
                       ),
                     );
                     setState(() {});
@@ -258,7 +321,7 @@ class _SchedulePageState extends State<SchedulePage> {
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => setState(() => globalSchedules.remove(item)),
+              onPressed: () => _confirmDelete(item),
             ),
           ],
         ),

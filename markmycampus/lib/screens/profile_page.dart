@@ -6,6 +6,9 @@ import 'package:markmycampus/screens/auth_screen.dart';
 import '../data/campus_data.dart';
 import '../widgets/nav_bar.dart';
 
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
   @override
@@ -20,6 +23,71 @@ class _ProfilePageState extends State<ProfilePage> {
     if (image != null) {
       setState(() => globalProfileImage = File(image.path));
     }
+  }
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "Logout",
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text("Are you sure you want to logout?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "CANCEL",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                globalSchedules.clear();
+
+                // Using PageRouteBuilder for an instant transition to AuthScreen
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (c, a1, a2) => const AuthScreen(),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
+                  ),
+                  (route) => false,
+                );
+
+                rootScaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(
+                    content: const Text("Logged out successfully"),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    margin: const EdgeInsets.all(20),
+                  ),
+                );
+              },
+              child: const Text(
+                "LOGOUT",
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -44,18 +112,10 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: () {
-              globalSchedules.clear();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (c) => const AuthScreen()),
-                (route) => false,
-              );
-            },
+            onPressed: _handleLogout,
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
